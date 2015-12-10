@@ -260,12 +260,6 @@ module.exports = function (app) {
                 var responseData = {};
                 responseData.serverError = ServerErrors.OutOfDateVersionError;
                 res.send(200, responseData);
-            } else if (!user.exists) {
-                // Account probably expired. Direct user to the sign up again.
-                logger.warn('User does not exist.');
-                var responseData = {};
-                responseData.serverError = ServerErrors.AccountExpiredError;
-                res.send(200, responseData);
             } else {
                 locMapRestApi2.getUserDashboard(req.params.userId, cache, function (status, result) {
                     logger.trace('Dashboard reply status: ' + status +
