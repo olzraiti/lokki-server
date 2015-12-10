@@ -9,6 +9,7 @@ var helpers = require('../../test_helpers/test_helpers');
 var lmHelpers = require('../test_helpers/locMapHelpers');
 var conf = require('../../lib/config');
 var Constants = require('../lib/constants');
+var ServerErrors = require('../lib/serverErrors')
 
 var suspend = require('suspend');
 
@@ -1675,6 +1676,20 @@ tests.v2.userRenameContacts = function(version) {
         });
     }
 };
+
+tests.v2.outOfDateVersionError = function(version) {
+    return suspend(function* (test) {
+        var res = yield lmHelpers.createLocMapUser(
+            test, testUserEmail, 'dev1', suspend.resumeRaw());
+        var auth = res[0];
+        var reply = res[1];
+        var res = (yield lmHelpers.api.get(test,
+            '/' + version + '/user/' + reply.id + '/version/' + (parseInt(Constants.MinimumAcceptedVersionCode) - 1) + '/dashboard', auth, suspend.resumeRaw()))[0];
+        //var dash = JSON.parse(JSON.stringify(lmHelpers.userDashboardv2));
+        test.deepEqual(res.data, {serverError: ServerErrors.OutOfDateVersionError});
+        test.done();
+    });
+}
 
 var v1 = 'v1', v2 = 'v2';
 var versions = [v1, v2];
