@@ -247,22 +247,10 @@ module.exports = function (app) {
         });
     });
 
-    routeUser(GET, 'v2', 'dashboard', function (req, res) {
+    routeUser(GET, 'v2', 'version/:versionCode/dashboard', function (req, res) {
         var cache = new Cache();
         cache.cache('locmapuser', req.params.userId, req.cachedUserObjFromAuthorization);
 
-        locMapRestApi2.getUserDashboard(req.params.userId, cache, function (status, result) {
-            logger.trace('Dashboard reply status: ' + status +
-                ' contents: ' + JSON.stringify(result));
-            res.send(status, result);
-        });
-    });
-
-    // Check for version, if it is out of date, then return a server message.
-    // Otherwise, return the user dashboard information.
-    routeUser(GET, ['v1', 'v2'], 'version/:versionCode/dashboard', function (req, res) {
-        var cache = new Cache();
-        cache.cache('locmapuser', req.params.userId, req.cachedUserObjFromAuthorization);
         // Load account data
         var user = new LocMapUserModel(req.params.userId);
         user.getData(function() {
@@ -279,7 +267,7 @@ module.exports = function (app) {
                 responseData.serverError = ServerErrors.AccountExpiredError;
                 res.send(200, responseData);
             } else {
-                locMapRestApi.getUserDashboard(req.params.userId, cache, function (status, result) {
+                locMapRestApi2.getUserDashboard(req.params.userId, cache, function (status, result) {
                     logger.trace('Dashboard reply status: ' + status +
                         ' contents: ' + JSON.stringify(result));
                     res.send(status, result);

@@ -8,6 +8,7 @@ See LICENSE for details
 var helpers = require('../../test_helpers/test_helpers');
 var lmHelpers = require('../test_helpers/locMapHelpers');
 var conf = require('../../lib/config');
+var Constants = require('../lib/constants');
 
 var suspend = require('suspend');
 
@@ -119,7 +120,7 @@ tests.both.userSignupLowerCasesEmail = function(version) {
 };
 
 // User dashboard requires authentication.
-tests.both.userDashboardAuthentication = function(version) {
+tests.v1.userDashboardAuthentication = function(version) {
     return function (test) {
         test.expect(5);
         lmHelpers.createLocMapUser(test, testUserEmail, 'dev1', function (auth, reply) {
@@ -131,6 +132,18 @@ tests.both.userDashboardAuthentication = function(version) {
     }
 };
 
+// User dashboard requires authentication.
+tests.v2.userDashboardAuthentication = function(version) {
+    return function (test) {
+        test.expect(5);
+        lmHelpers.createLocMapUser(test, testUserEmail, 'dev1', function (auth, reply) {
+            lmHelpers.api.get(test, '/' + version + '/user/' + reply.id + '/version/' + Constants.MinimumAcceptedVersionCode + '/dashboard',
+                {headers: {authorizationtoken: ''}}, lmHelpers.wrongAuthTokenResult, function () {
+                    test.done();
+                });
+        });
+    }
+};
 // User dashboard has correct information.
 tests.v1.userDashboardNewUser = function(version) {
     return function (test) {
@@ -154,7 +167,7 @@ tests.v2.userDashboardNewUser = function (version) {
         var auth = res[0];
         var reply = res[1];
         var res = (yield lmHelpers.api.get(test, 
-               '/' + version + '/user/' + reply.id + '/dashboard', auth, suspend.resumeRaw()))[0];
+               '/' + version + '/user/' + reply.id + '/version/' + Constants.MinimumAcceptedVersionCode + '/dashboard', auth, suspend.resumeRaw()))[0];
         var dash = JSON.parse(JSON.stringify(lmHelpers.userDashboardv2));
         test.deepEqual(res.data, dash);
         test.done();
@@ -162,7 +175,7 @@ tests.v2.userDashboardNewUser = function (version) {
 };
 
 // User dashboard contains location when it has been posted.
-tests.both.userDashboardWithLocation = function(version) {
+tests.v2.userDashboardWithLocation = function(version) {
     return function (test) {
     test.expect(8);
         lmHelpers.createLocMapUser(test, testUserEmail, 'dev1', function (auth, reply) {
@@ -170,7 +183,7 @@ tests.both.userDashboardWithLocation = function(version) {
             authWithLocation.data = JSON.parse(JSON.stringify(lmHelpers.locMapReport1));
             lmHelpers.api.post(test, '/' + version  + '/user/' + reply.id + '/location', authWithLocation,
                 function () {
-                    lmHelpers.api.get(test, '/' + version + '/user/' + reply.id + '/dashboard', auth,
+                    lmHelpers.api.get(test, '/' + version + '/user/' + reply.id + '/version/' + Constants.MinimumAcceptedVersionCode + '/dashboard', auth,
                         function (res) {
                             lmHelpers.compareLocation(test, res.data.location,
                                 lmHelpers.locMapReport1.location);
@@ -182,7 +195,7 @@ tests.both.userDashboardWithLocation = function(version) {
 };
 
 // User dashboard contains battery status when it has been posted.
-tests.both.userDashBoardWithBattery = function(version) {
+tests.v1.userDashBoardWithBattery = function(version) {
     return function (test) {
         test.expect(5);
         lmHelpers.createLocMapUser(test, testUserEmail, 'dev1', function (auth, reply) {
@@ -191,6 +204,25 @@ tests.both.userDashBoardWithBattery = function(version) {
             lmHelpers.api.post(test, '/' + version + '/user/' + reply.id + '/location', authWithLocation,
                 function () {
                     lmHelpers.api.get(test, '/' + version + '/user/' + reply.id + '/dashboard', auth,
+                        function (res) {
+                            test.equal(res.data.battery, 99);
+                            test.done();
+                        });
+                });
+        });
+    }
+};
+
+// User dashboard contains battery status when it has been posted.
+tests.v2.userDashBoardWithBattery = function(version) {
+    return function (test) {
+        test.expect(5);
+        lmHelpers.createLocMapUser(test, testUserEmail, 'dev1', function (auth, reply) {
+            var authWithLocation = JSON.parse(JSON.stringify(auth));
+            authWithLocation.data = JSON.parse(JSON.stringify(lmHelpers.locMapReport1));
+            lmHelpers.api.post(test, '/' + version + '/user/' + reply.id + '/location', authWithLocation,
+                function () {
+                    lmHelpers.api.get(test, '/' + version + '/user/' + reply.id + '/version/' + Constants.MinimumAcceptedVersionCode + '/dashboard', auth,
                         function (res) {
                             test.equal(res.data.battery, 99);
                             test.done();
@@ -533,7 +565,7 @@ tests.both.allowedUsersUpperLimit = function(version) {
 };
 
 // Stub users cannot be authorized.
-tests.both.stubUserDashboardFails = function(version) {
+tests.v1.stubUserDashboardFails = function(version) {
     return function (test) {
         test.expect(6);
         lmHelpers.createLocMapUser(test, testUserEmail, 'dev1', function (auth1, reply1) {
@@ -542,6 +574,25 @@ tests.both.stubUserDashboardFails = function(version) {
                 // Hash for stub user email, depends on the hashing function.
                 lmHelpers.api.get(test,
                     '/' + version + '/user/b4b265d4a1a7f40c631e4dd003510ebf43f32135/dashboard',
+                    {'headers': {'authorizationtoken': ''}}, lmHelpers.wrongAuthTokenResult,
+                    function () {
+                        test.done();
+                    });
+            });
+        });
+    }
+};
+
+// Stub users cannot be authorized.
+tests.both.stubUserDashboardFails = function(version) {
+    return function (test) {
+        test.expect(6);
+        lmHelpers.createLocMapUser(test, testUserEmail, 'dev1', function (auth1, reply1) {
+            auth1.data = {emails: [testStubUser]};
+            lmHelpers.api.post(test, '/' + version + '/user/' + reply1.id + '/allow', auth1, function () {
+                // Hash for stub user email, depends on the hashing function.
+                lmHelpers.api.get(test,
+                    '/' + version + '/user/b4b265d4a1a7f40c631e4dd003510ebf43f32135/version/' + Constants.MinimumAcceptedVersionCode + '/dashboard',
                     {'headers': {'authorizationtoken': ''}}, lmHelpers.wrongAuthTokenResult,
                     function () {
                         test.done();
@@ -604,7 +655,7 @@ tests.both.existingUserSignupWrongDeviceid = function(version) {
     }
 };
 
-tests.both.setVisibility = function(version) {
+tests.v1.setVisibility = function(version) {
     return function (test) {
         test.expect(8);
         lmHelpers.createLocMapUser(test, testUserEmail, 'dev1', function (auth1, reply1) {
@@ -619,6 +670,32 @@ tests.both.setVisibility = function(version) {
                             lmHelpers.api.put(test, '/' + version + '/user/' + reply1.id + '/visibility',
                                 authWithVisibility, function () {
                                     lmHelpers.api.get(test, '/' + version + '/user/' + reply1.id + '/dashboard',
+                                        auth1, function (dash2) {
+                                            test.equal(dash2.data.visibility, true);
+                                            test.done();
+                                        });
+                                });
+                        });
+                });
+        });
+    }
+};
+
+tests.v2.setVisibility = function(version) {
+    return function (test) {
+        test.expect(8);
+        lmHelpers.createLocMapUser(test, testUserEmail, 'dev1', function (auth1, reply1) {
+            var authWithVisibility = JSON.parse(JSON.stringify(auth1));
+            authWithVisibility.data = {visibility: false};
+            lmHelpers.api.put(test, '/' + version + '/user/' + reply1.id + '/visibility', authWithVisibility,
+                function () {
+                    lmHelpers.api.get(test, '/' + version + '/user/' + reply1.id + '/version/' + Constants.MinimumAcceptedVersionCode + '/dashboard', auth1,
+                        function (dash) {
+                            test.equal(dash.data.visibility, false);
+                            authWithVisibility.data = {visibility: true};
+                            lmHelpers.api.put(test, '/' + version + '/user/' + reply1.id + '/visibility',
+                                authWithVisibility, function () {
+                                    lmHelpers.api.get(test, '/' + version + '/user/' + reply1.id + '/version/' + Constants.MinimumAcceptedVersionCode + '/dashboard',
                                         auth1, function (dash2) {
                                             test.equal(dash2.data.visibility, true);
                                             test.done();
