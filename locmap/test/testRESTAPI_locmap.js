@@ -1685,7 +1685,6 @@ tests.v2.outOfDateVersionError = function(version) {
         var reply = res[1];
         var res = (yield lmHelpers.api.get(test,
             '/' + version + '/user/' + reply.id + '/version/' + (parseInt(Constants.MinimumAcceptedVersionCode) - 1) + '/dashboard', auth, suspend.resumeRaw()))[0];
-        //var dash = JSON.parse(JSON.stringify(lmHelpers.userDashboardv2));
         test.deepEqual(res.data, {serverError: ServerErrors.OutOfDateVersionError});
         test.done();
     });
